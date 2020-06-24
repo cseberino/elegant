@@ -1,0 +1,145 @@
+Elegant
+
+a lambda calculus interpreter
+
+Lambda calculus is an elegant Turing complete language.  Programs are composed
+of expressions.  Expressions are atoms or lists.  Atoms are lowercase letters.
+Lists are sets of λ operators and expressions.  The two types of lists are
+definitions and invocations.  Definitions contain a λ operator, an atom, and, an
+expression.  Invocations contain two expressions.
+
+Executing programs implies evaluating expressions.  Evaluating expressions
+return expressions.  Atoms evaluate to themselves.  Definitions evaluate to
+themselves with their expressions replaced by their evaluations.  Invocations
+evaluate to the corresponding lists of evaluated elements, unless, that results
+in the first element being a definition.  See the source code for details of how
+that case is handled.
+
+The interpreter will replace each of the following abbreviations with its
+corresponding definition:
+
+        0, 1, 2, ...
+        IS_ZERO
+        SUCC
+        PRED
+        TRUE
+        FALSE
+        AND
+        OR
+        NOT
+        PLUS
+        MINUS
+        MULT
+        EXP
+        IF
+
+Here is a sample Elegant session:
+
+% ./elegant
+Elegant 1.0.0
+Type "exit" to leave the interpreter.
+>>> a
+
+a
+>>> b
+
+b
+>>> x
+
+x
+>>> y
+
+y
+>>> (λ a b)
+
+(λ a b)
+>>> (λ x y)
+
+(λ x y)
+>>> (λ a (b c))
+
+(λ a (b c))
+>>> (λ a (λ b c))
+
+(λ a (λ b c))
+>>> (λ a (λ b (c d)))
+
+(λ a (λ b (c d)))
+>>> (λ a (λ b (λ c d)))
+
+(λ a (λ b (λ c d)))
+>>> (a b)
+
+(a b)
+>>> (x y)
+
+(x y)
+>>> (a (b (c d)))
+
+(a (b (c d)))
+>>> ((λ a a) b)
+
+b
+>>> ((λ x (x x)) y)
+
+(y y)
+>>> ((λ a (a b)) (x y))
+
+((x y) b)
+>>> ((λ a (a a)) (x y))
+
+((x y) (x y))
+>>> ((λ a (λ b a)) c)
+
+(λ b c)
+>>> PLUS
+
+(λ x (λ y (λ z (λ t ((x z) ((y z) t))))))
+>>> EXP
+
+(λ x (λ y (y x)))
+>>> TRUE
+
+(λ x (λ y x))
+>>> ((PLUS 4) 3)
+
+(λ z (λ t (z (z (z (z (z (z (z t)))))))))
+>>> ((PLUS ((PLUS ((PLUS 1) 2)) 3)) 4)
+
+(λ z (λ t (z (z (z (z (z (z (z (z (z (z t))))))))))))
+>>> ((MINUS 4) 1)
+
+(λ z (λ t (z (z (z t)))))
+>>> ((MINUS ((MINUS ((MINUS 4) 1)) 1)) 1)
+
+(λ z (λ t (z t)))
+>>> ((MULT 3) 2)
+
+(λ z (λ y (z (z (z (z (z (z y))))))))
+>>> ((EXP 2) 2)
+
+(λ y (λ a (y (y (y (y a))))))
+>>> (SUCC 4)
+
+(λ a (λ z (a (a (a (a (a z)))))))
+>>> (PRED 4)
+
+(λ a (λ z (a (a (a z)))))
+>>> ((AND TRUE) FALSE)
+
+(λ x (λ y y))
+>>> ((OR FALSE) TRUE)
+
+(λ x (λ y x))
+>>> (NOT FALSE)
+
+(λ a (λ z a))
+>>> (((IF TRUE) 5) 8)
+
+(λ b (λ a (b (b (b (b (b a)))))))
+>>> (IS_ZERO 8)
+
+(λ d (λ c c))
+>>> exit
+
+See the source code and other lambda calculus resources for further details.

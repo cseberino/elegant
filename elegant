@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+#
+# Copyright 2020 Christian Seberino
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+import re
+import string
+import sys
+
+DEF_BEG = "['λ', '"
+ABBREVS = {"PLUS"    : "(λ x (λ y (λ z (λ t ((x z) ((y z) t))))))",
+           "MINUS"   : ("(λ x (λ y ((y (λ x (λ z (λ t (((x (λ u (λ v (v (u "
+                                           "z))))) (λ w t)) (λ w w)))))) x)))"),
+           "MULT"    : "(λ x (λ y (λ z (y (x z)))))",
+           "EXP"     : "(λ x (λ y (y x)))",
+           "SUCC"    : "(λ x (λ y (λ z (y ((x y) z)))))",
+           "PRED"    : ("(λ x (λ y (λ z (((x (λ t (λ u (u (t y))))) (λ v z))"
+                                                                " (λ v v)))))"),
+           "TRUE"    : "(λ x (λ y x))",
+           "FALSE"   : "(λ x (λ y y))",
+           "AND"     : "(λ x (λ y ((x y) x)))",
+           "OR"      : "(λ x (λ y ((x x) y)))",
+           "NOT"     : "(λ x (λ y (λ z ((x z) y))))",
+           "IF"      : "(λ x (λ y (λ z ((x y) z))))",
+           "IS_ZERO" : "(λ x ((x (λ y (λ x (λ y y)))) (λ x (λ y x))))"}
+
+def is_atom(e):
+        """
+        Determines if expressions are atoms.
+        """
+
+        return isinstance(e, str) and (e in string.ascii_lowercase)
+
+def is_def(e):
+        """
+        Determines if expressions are definitions.
+        """
+
+        return isinstance(e, list) and (len(e) == 3) and (e[0] == "λ") and \
+                                                                   is_atom(e[1])
+
+def find_end(beg, e):
+        """
+        Finds the ends of lists in expressions.
+        """
+
+        pos     = beg
+        balance = 1
+        while balance != 0:
+                pos += 1
+                if e[pos] == "[":
+                        balance += 1
+                if e[pos] == "]":
+                        balance -= 1
+
+        return pos
+
+def find_scope(atom, e):
+        """
+        Finds the scopes of atoms in expressions.
+        """
+
+        scope = []
+        beg   = e.find(DEF_BEG + atom)
+        while beg != -1:
+                end = find_end(beg, e)
+                scope.extend(range(beg, end))
+                beg = e.find(DEF_BEG + atom, end)
+
+        return scope
+
+def find_unused(e_1, e_2):
+        """
+        Finds atoms that are unused in two expressions.
+        """
+
+        for atom in string.ascii_lowercase:
+                if atom not in (e_1 + e_2):
+                        unused = atom
+                        break
+        try:
+                unused = unused
+        except:
+                print("Warning: atom shortage")
+                sys.exit()
+
+        return unused
+
+def do_renaming(e_1, e_2):
+        """
+        Replaces the bound occurences of atoms in one expression, that are found
+        in another expression, with atoms that are not found in either
+        expression.
+        """
+
+        for atom in [k for k in set(e_2) if k in string.ascii_lowercase]:
+                unused = find_unused(e_1, e_2)
+                for i in find_scope(atom, e_1)[::-1]:
+                        if e_1[i] == atom:
+                                e_1 = e_1[:i] + unused + e_1[i + 1:]
+
+        return e_1
+
+def do_invoc(e):
+        """
+        Does invocations.
+        """
+
+        atom   = e[0][1]
+        body   = str(e[0][2])
+        arg    = str(e[1])
+        result = str(do_renaming(body, arg))
+        scope  = find_scope(atom, result)
+        i      = result.find(atom)
+        while i != -1:
+                if i not in scope:
+                        if is_atom(arg):
+                                result = result[:i]     + arg + result[i + 1:]
+                        else:
+                                result = result[:i - 1] + arg + result[i + 2:]
+                        i = result.find(atom, i + len(arg))
+                else:
+                        i = result.find(atom, i + 1)
+        if not is_atom(result):
+                result = eval(result)
+
+        return result
+
+def print_output(e):
+        """
+        Prints the formatted versions of expressions.
+        """
+
+        e = str(e)
+        e = e.replace(",", "")
+        e = e.replace("'", "")
+        e = e.replace("[", "(")
+        e = e.replace("]", ")")
+        print("")
+        print(e)
+
+def evaluate(e):
+        """
+        Evaluates expressions.
+        """
+
+        if is_atom(e):
+                output = e
+        else:
+                if   is_def(e):
+                        output = [e[0], e[1], evaluate(e[2])]
+                elif len(e) == 2:
+                        output = [evaluate(e[0]), evaluate(e[1])]
+                        if is_def(output[0]):
+                                output = evaluate(do_invoc(output))
+                else:
+                        print("Warning: invalid expression")
+                        output = ""
+
+        return output
+
+def replace_abbrevs(e):
+        """
+        Replaces abbreviations with their corresponding expressions.
+        """
+
+        for k in ABBREVS:
+                e = e.replace(k, ABBREVS[k])
+        for k in reversed(list(re.finditer("\d+", e))):
+                num_func = "(λ x (λ y " + int(k.group(0)) * "(x " + "y" +      \
+                                                   (int(k.group(0)) + 2) * ")"
+                e        = e[:k.start()] + num_func + e[k.end():]
+
+        return e
+
+def get_input():
+        """
+        Gets the formatted versions of expressions.
+        """
+
+        print(">>> ", end = "")
+        e = input()
+        if e == "exit":
+                sys.exit()
+        e = replace_abbrevs(e)
+        e = re.sub("(\s\s+)", " ", e)
+        e = re.sub("\( ", "(", e)
+        e = re.sub(" \)", ")", e)
+        e = e.replace(" ",  ", ")
+        e = e.replace("(",  "[")
+        e = e.replace(")",  "]")
+        e = re.sub("([a-zλ])", '"\\1"', e)
+        try:
+                e = eval(e)
+        except:
+                if e:
+                        print("Warning: invalid expression")
+                        e = ""
+
+        return e
+
+def run():
+        """
+        Runs the interpreter.
+        """
+
+        print("Elegant 1.0.0")
+        print('Type "exit" to leave the interpreter.')
+        while True:
+                print_output(evaluate(get_input()))
+
+run()
