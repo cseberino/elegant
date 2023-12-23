@@ -16,7 +16,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import unittest
-import warnings
 import subprocess
 import string
 
@@ -30,9 +29,6 @@ def num_func(n, x = "x", y = "y"):
                                                                  (n + 2) * ")"
 
 class Tester(unittest.TestCase):
-        def setUp(self):
-                warnings.simplefilter("ignore", ResourceWarning)
-
         def do_minus_test(self, e, num):
                 command = 'echo "%s\nexit" | ../elegant' % e
                 output  = subprocess.check_output(command, shell = True)
